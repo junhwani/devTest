@@ -1,0 +1,6 @@
+configMapGenerator:
+- name: the-map
+  env: config.properties
+
+resources:
+- deployment.yaml

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: klevr-manager
+  name: klevr-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: klevr-manager
+  template:
+    metadata:
+      labels:
+        name: klevr-manager
+    spec:
+      containers:
+        - args:
+            - bash
+            - -c
+            - |
+               /init-db.sh $(KLEVR_DB_USER) $(KLEVR_DB_PASSWD) $(KLEVR_DB_URL_A) $(KLEVR_DB_PORT) klevr ./conf/klevr-manager-db.sql /nexclipper
+               /klevr-manager -c ./conf/klevr-manager-compose.yml -hook "$(NEXCLIPPER_INNER_URL)/events/klevr" -lp /nexclipper/log/klevr/klevr-manager.log
+          env:
+            - name: KLEVR_DB_LOGLEVEL
+              value: "warn"
+            - name: KLEVR_DB_SHOWSQL
+              value: "false"
+            - name: KLEVR_DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: the-map
+                  key: KLEVR_DB_URL
+            - name: KLEVR_SERVER_EVENTHANDLER
+              value: "$(KLEVR_EVENTHANDLER):-webhook"
+            - name: KLEVR_SERVER_MQ_URL
+              value: "amqp://$(MQ_USERNAME):$(MQ_PASSWORD)@$(MQ_HOST):$(MQ_PORT)/$(MQ_VIRTUAL_HOST)"
+            - name: KLEVR_SERVER_STATUSUPDATECYCLE
+              value: "30"
+            - name: LOG_LEVEL
+              value: "debug"
+            - name: LOG_MAXAGE
+              value: "10"
+            - name: LOG_MAXBACKUPS
+              value: "10"
+            - name: LOG_MAXSIZE
+              value: "5"
+            - name: LOG_PATH
+              value: "/nexclipper/klevr_log/klevr-manager.log"
+            - name: KLEVR_DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: the-map
+                  key: KLEVR_DB_USER
+            - name: KLEVR_DB_PASSWD
+              valueFrom:
+                configMapKeyRef:
+                  name: the-map
+                  key: KLEVR_DB_PASSWD
+            - name: KLEVR_DB_URL_A
+              valueFrom:
+                configMapKeyRef:
+                  name: the-map
+                  key: KLEVR_DB_URL_A
+            - name: KLEVR_DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: the-map
+                  key: KLEVR_DB_PORT
+            - name: NEXCLIPPER_INNER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: the-map
+                  key: NEXCLIPPER_INNER_URL
+          image: nexclipper/klevr-manager
+          name: dev-klevr-manager
+          ports:
+            - containerPort: 8090
+          resources: {}
+          volumeMounts:
+            - mountPath: /nexclipper
+              name: klevr-manager-claim0
+      restartPolicy: Always
+      volumes:
+        - name: klevr-manager-claim0
+          emptyDir: {}
+#          persistentVolumeClaim:
+#            claimName: klevr-manager-claim0
+
